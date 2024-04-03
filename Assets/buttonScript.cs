@@ -6,20 +6,36 @@ using TMPro;
 
 public class buttonScript : MonoBehaviour
 {
-    private string enteredNumbers = "010";
+    private string enteredNumbers = "010-";
+    int maxEnter = 12;
     public Button[] buttons;
     TextMeshProUGUI display;
+    AudioSource sound;
+    AudioClip[] clips;
+    AudioClip backClip;
+    AudioClip clearClip;
 
+    // Start is called before the first frame update
     void Start()
     {
         buttons = new Button[10];
+        //audioSources = new AudioSource[10];
+        clips = new AudioClip[10];
 
-        for(int i=0; i<10; i++)
+        sound = GameObject.Find("Audio").GetComponent<AudioSource>();
+
+        for (int i = 0; i < 10; i++)
         {
             int buttonIndex = i;
             buttons[i] = GameObject.Find("Button" + buttonIndex).GetComponent<Button>();
             buttons[i].onClick.AddListener(() => ButtonClicked(buttonIndex));
+
+            clips[i] = Resources.Load<AudioClip>("Audio/" + i.ToString());
+            //Debug.Log(clips[i]);
         }
+
+        backClip = Resources.Load<AudioClip>("Audio/back");
+        clearClip = Resources.Load<AudioClip>("Audio/clear");
 
         display = GameObject.Find("display").GetComponent<TextMeshProUGUI>();
         display.text = enteredNumbers;
@@ -27,18 +43,22 @@ public class buttonScript : MonoBehaviour
 
     void ButtonClicked(int buttonIndex)
     {
+        if (enteredNumbers.Length >= maxEnter)
+            return;
+
         //Debug.Log(buttonIndex + "is pushed");
         enteredNumbers += buttonIndex.ToString();
-        //display.text = enteredNumbers;
         display.text = FormatEnteredNumbers();
+        //Debug.Log(enteredNumbers.Length);
+        sound.clip = clips[buttonIndex];
+        sound.Play();
     }
 
-    //010- 형식 포맷 만들기부터 수정
     string FormatEnteredNumbers()
     {
-        if(enteredNumbers.Length >= 4)
+        if (enteredNumbers.Length >= 9)
         {
-            return enteredNumbers.Substring(0, 4) + " - " + enteredNumbers.Substring(4);
+            return enteredNumbers.Substring(0, 8) + "-" + enteredNumbers.Substring(8);
         }
         else
         {
@@ -49,15 +69,29 @@ public class buttonScript : MonoBehaviour
 
     public void back()
     {
-        if(enteredNumbers.Length > 0)
+        if (enteredNumbers.Length > 4)
         {
             enteredNumbers = enteredNumbers.Substring(0, enteredNumbers.Length - 1);
-            display.text = enteredNumbers;
+            display.text = FormatEnteredNumbers();
+            sound.clip = backClip;
+            sound.Play();
         }
     }
 
     public void clear()
     {
-        Debug.Log("clear button is pushed");
+        //Debug.Log("clear button is pushed");
+
+        if (enteredNumbers.Length == maxEnter)
+        {
+            Debug.Log("완성");
+        }
+        else
+        {
+            Debug.Log("실패");
+        }
+
+        sound.clip = clearClip;
+        sound.Play();
     }
 }
