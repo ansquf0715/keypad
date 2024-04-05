@@ -166,6 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7c6e5c154adf5a40a2b24f6f71ed202, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  enteredNumbers: 010-
   buttons: []
 --- !u!1 &54696303
 GameObject:

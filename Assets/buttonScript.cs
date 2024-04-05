@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Photon.Pun;
 
 public class buttonScript : MonoBehaviour
 {
-    private string enteredNumbers = "010-";
+    public string enteredNumbers = "010-";
     int maxEnter = 12;
     public Button[] buttons;
     TextMeshProUGUI display;
@@ -85,6 +86,7 @@ public class buttonScript : MonoBehaviour
         if (enteredNumbers.Length == maxEnter)
         {
             Debug.Log("¿Ï¼º");
+            GetComponent<PhotonView>().RPC("SendEnteredNumbersToServer", RpcTarget.All, enteredNumbers);
         }
         else
         {
