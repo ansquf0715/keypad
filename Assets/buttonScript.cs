@@ -86,7 +86,7 @@ public class buttonScript : MonoBehaviour
         if (enteredNumbers.Length == maxEnter)
         {
             Debug.Log("¿Ï¼º");
-            GetComponent<PhotonView>().RPC("SendEnteredNumbersToServer", RpcTarget.All, enteredNumbers);
+            //GetComponent<PhotonView>().RPC("SendEnteredNumbersToServer", RpcTarget.All, enteredNumbers);
         }
         else
         {
