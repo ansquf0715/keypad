@@ -1,3 +1,4 @@
+import socket
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -5,6 +6,79 @@ from kivy.uix.label import Label
 from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.core.audio import SoundLoader
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.textinput import TextInput
+import threading
+
+class InputScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.layout = GridLayout(cols=2)
+        self.layout.add_widget(Label(text='서버 IP 주소:'))
+        self.ip_input = TextInput(multiline=False)
+        self.layout.add_widget(self.ip_input)
+        self.layout.add_widget(Label(text='포트 번호:'))
+        self.port_input = TextInput(multiline=False)
+        self.layout.add_widget(self.port_input)
+
+        self.connect_button = Button(text='연결', on_press=self.connect)
+        self.layout.add_widget(self.connect_button)
+
+        self.add_widget(self.layout)
+
+    def connect(self, instance):
+        ip_address = self.ip_input.text
+        port_number = int(self.port_input.text)
+        app = App.get_running_app()
+        app.connect_to_server(ip_address, port_number)
+        app.change_to_number_pad_screen()
+
+class NumberPadScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.layout = GridLayout(cols=3)
+        for i in range(1,10):
+            button = Button(text=str(i), on_press=self.on_button_click)
+            self.layout.add_widget(button)
+        self.layout.add_widget(Button(text='취소', on_press=self.cancel_input))
+        self.layout.add_widget(Button(text='0', on_press=self.on_button_click))
+        self.layout.add_widget(Button(text='완료', on_press=self.complete_input))
+
+        self.add_widget(self.layout)
+
+        def on_button_click(self, instance):
+            button_text = instance.text
+            if len(self.display_text) < 13:
+                if len(self.display_text) == 3 and button_text != '-':
+                    self.display_text += '-'
+                elif len(self.display_text) == 8 and button_text != '-':
+                    self.display_text += '-'
+                self.display_text += button_text
+                self.display_label.text = self.display_text
+                self.play_button_sound(button_text)
+
+        def cancel_input(self, instance):
+            if self.display_text:
+                if len(self.display_text) == 10:
+                    self.display_text = self.display_text[:-2]
+                elif len(self.display_text) == 5:
+                    self.display_text = self.display_text[:-2]
+                else:
+                    self.display_text = self.display_text[:-1]
+                self.display_label.text = self.display_text
+                self.play_button_sound('back')
+
+        def complete_input(self, instance):
+            if len(self.display_text) == 13:
+                print("입력된 번호:", self.display_text)
+                self.send_to_server(self.display_text)
+
+                self.display_text = '010-'
+                self.play_button_sound('clear')
+            else:
+                print("입력된 번호는 13자리여야 확인됩니다.")
 
 class GalaxyTabApp(App):
     def __init__(self, **kwargs):
@@ -26,76 +100,51 @@ class GalaxyTabApp(App):
         }
 
     def build(self):
-        # 한글 폰트 설정
-        LabelBase.register(name='AppleSDGothicNeoEB', fn_regular='./AppleSDGothicNeoEB.ttf')
+        self.screen_manager = ScreenManager()
 
-        # 배경색 설정
-        Window.clearcolor = (1, 1, 1, 1)  # 흰색 배경
+        self.input_screen = InputScreen(name='input')
+        self.number_pad_screen = NumberPadScreen(name='number_pad')
 
-        main_layout = GridLayout(cols=1, rows=2)
+        self.screen_manager.add_widget(self.input_screen)
+        self.screen_manager.add_widget(self.number_pad_screen)
 
-        # 상단 레이아웃: 입력된 번호를 표시하는 레이블
-        top_layout = GridLayout(cols=1, rows=1, size_hint=(1, 0.2))
-        self.display_label = Label(text=self.display_text, font_name='AppleSDGothicNeoEB', font_size='70sp', color=(0, 0, 0, 1)) # 검정색 텍스트
-        top_layout.add_widget(self.display_label)
-        main_layout.add_widget(top_layout)
+        return self.screen_manager
 
-        # 하단 레이아웃: 숫자 버튼 및 기능 버튼
-        bottom_layout = GridLayout(cols=3, rows=4, size_hint=(1, 0.8))
-        for i in range(1, 10):
-            button = Button(text=str(i), on_press=self.on_button_click, font_name='AppleSDGothicNeoEB', font_size='60sp')
-            bottom_layout.add_widget(button)
-
-        # 취소 버튼
-        cancel_button = Button(text='취소', on_press=self.cancel_input, font_name='AppleSDGothicNeoEB', font_size='60sp')
-        bottom_layout.add_widget(cancel_button)
-
-        # 0 버튼
-        zero_button = Button(text='0', on_press=self.on_button_click, font_name='AppleSDGothicNeoEB', font_size='60sp')
-        bottom_layout.add_widget(zero_button)
-
-        # 완료 버튼
-        done_button = Button(text='완료', on_press=self.complete_input, font_name='AppleSDGothicNeoEB', font_size='60sp')
-        bottom_layout.add_widget(done_button)
-
-        main_layout.add_widget(bottom_layout)
-
-        return main_layout
-
-    def on_button_click(self, instance):
-        # 버튼을 누르면 입력된 번호를 표시하는 레이블을 업데이트
-        button_text = instance.text
-        if len(self.display_text) < 13:  # 최대 길이는 13자
-            # '-'를 자동으로 추가
-            if len(self.display_text) in [3, 8]:
-                self.display_text += '-'
-            self.display_text += button_text
-            self.display_label.text = self.display_text
-            self.play_button_sound(button_text)
-
-    def cancel_input(self, instance):
-        # 취소 버튼을 누르면 입력된 번호를 한 글자씩 삭제
-        if self.display_text:
-            if len(self.display_text) == 9:  # '-'를 만난 경우
-                self.display_text = self.display_text[:-2]
-            else:
-                self.display_text = self.display_text[:-1]
-            self.display_label.text = self.display_text
-            self.play_button_sound('back')
-
-    def complete_input(self, instance):
-        # 입력된 번호가 13자리인 경우에만 확인 처리
-        if len(self.display_text) == 13:
-            print("입력된 번호:", self.display_text)
-            self.play_button_sound('clear')
-        else:
-            print("입력된 번호는 13자리여야 확인됩니다.")
+    def connect_to_server(self):
+        HOST = '192.168.0.2'
+        PORT = 65432
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((HOST, PORT))
+            print("서버에 연결되었습니다.")
+            #
+            # while True:
+            #     phone_number = input("전화번호를 입력하세요: ")
+            #     s.sendall(phone_number.encode())
+            # s.sendall("종료".encode())
+            # while True:
+            #     pass  # 계속해서 서버와 연결을 유지
 
     def play_button_sound(self, sound_key):
         if sound_key in self.button_sounds:
             sound = self.button_sounds[sound_key]
             if sound:
                 sound.play()
+
+    def send_to_server(self, data):
+        HOST = '192.168.0.2'
+        PORT = 65432
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((HOST, PORT))
+            # print("서버에 연결되었습니다")
+            s.sendall(data.encode())
+
+    # def on_stop(self):
+    #     # 앱이 종료될 때 서버로 종료 메시지를 보냄
+    #     # 서버에서는 이 메시지를 받아 서버를 종료할 수 있도록 구현
+    #     pass
+
+    def change_to_number_pad_screen(self):
+        self.screen_manager.current = 'number_pad'
 
 if __name__ == '__main__':
     GalaxyTabApp().run()
