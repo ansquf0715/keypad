@@ -31,8 +31,16 @@ class InputScreen(Screen):
         ip_address = self.ip_input.text
         port_number = int(self.port_input.text)
         app = App.get_running_app()
-        app.connect_to_server(ip_address, port_number)
-        app.change_to_number_pad_screen()
+
+        HOST = ip_address
+        PORT = port_number
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((HOST, PORT))
+                print("서버에 연결되었습니다.")
+                app.change_to_number_pad_screen()
+        except Exception as e:
+            print("서버 연결에 실패했습니다:", e)
 
 class NumberPadScreen(Screen):
     def __init__(self, **kwargs):
@@ -48,37 +56,37 @@ class NumberPadScreen(Screen):
 
         self.add_widget(self.layout)
 
-        def on_button_click(self, instance):
-            button_text = instance.text
-            if len(self.display_text) < 13:
-                if len(self.display_text) == 3 and button_text != '-':
-                    self.display_text += '-'
-                elif len(self.display_text) == 8 and button_text != '-':
-                    self.display_text += '-'
-                self.display_text += button_text
-                self.display_label.text = self.display_text
-                self.play_button_sound(button_text)
+    def on_button_click(self, instance):
+        button_text = instance.text
+        if len(self.display_text) < 13:
+            if len(self.display_text) == 3 and button_text != '-':
+                self.display_text += '-'
+            elif len(self.display_text) == 8 and button_text != '-':
+                self.display_text += '-'
+            self.display_text += button_text
+            self.display_label.text = self.display_text
+            self.play_button_sound(button_text)
 
-        def cancel_input(self, instance):
-            if self.display_text:
-                if len(self.display_text) == 10:
-                    self.display_text = self.display_text[:-2]
-                elif len(self.display_text) == 5:
-                    self.display_text = self.display_text[:-2]
-                else:
-                    self.display_text = self.display_text[:-1]
-                self.display_label.text = self.display_text
-                self.play_button_sound('back')
-
-        def complete_input(self, instance):
-            if len(self.display_text) == 13:
-                print("입력된 번호:", self.display_text)
-                self.send_to_server(self.display_text)
-
-                self.display_text = '010-'
-                self.play_button_sound('clear')
+    def cancel_input(self, instance):
+        if self.display_text:
+            if len(self.display_text) == 10:
+                self.display_text = self.display_text[:-2]
+            elif len(self.display_text) == 5:
+                self.display_text = self.display_text[:-2]
             else:
-                print("입력된 번호는 13자리여야 확인됩니다.")
+                self.display_text = self.display_text[:-1]
+            self.display_label.text = self.display_text
+            self.play_button_sound('back')
+
+    def complete_input(self, instance):
+        if len(self.display_text) == 13:
+            print("입력된 번호:", self.display_text)
+            self.send_to_server(self.display_text)
+
+            self.display_text = '010-'
+            self.play_button_sound('clear')
+        else:
+            print("입력된 번호는 13자리여야 확인됩니다.")
 
 class GalaxyTabApp(App):
     def __init__(self, **kwargs):
@@ -110,19 +118,7 @@ class GalaxyTabApp(App):
 
         return self.screen_manager
 
-    def connect_to_server(self):
-        HOST = '192.168.0.2'
-        PORT = 65432
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((HOST, PORT))
-            print("서버에 연결되었습니다.")
-            #
-            # while True:
-            #     phone_number = input("전화번호를 입력하세요: ")
-            #     s.sendall(phone_number.encode())
-            # s.sendall("종료".encode())
-            # while True:
-            #     pass  # 계속해서 서버와 연결을 유지
+
 
     def play_button_sound(self, sound_key):
         if sound_key in self.button_sounds:
