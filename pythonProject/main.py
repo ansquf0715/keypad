@@ -56,16 +56,16 @@ class NumberPadScreen(Screen):
 
         self.add_widget(self.layout)
 
-    def on_button_click(self, instance):
-        button_text = instance.text
-        if len(self.display_text) < 13:
-            if len(self.display_text) == 3 and button_text != '-':
-                self.display_text += '-'
-            elif len(self.display_text) == 8 and button_text != '-':
-                self.display_text += '-'
-            self.display_text += button_text
-            self.display_label.text = self.display_text
-            self.play_button_sound(button_text)
+    # def on_button_click(self, instance):
+    #     button_text = instance.text
+    #     if len(self.display_text) < 13:
+    #         if len(self.display_text) == 3 and button_text != '-':
+    #             self.display_text += '-'
+    #         elif len(self.display_text) == 8 and button_text != '-':
+    #             self.display_text += '-'
+    #         self.display_text += button_text
+    #         self.display_label.text = self.display_text
+    #         self.play_button_sound(button_text)
 
     def cancel_input(self, instance):
         if self.display_text:
