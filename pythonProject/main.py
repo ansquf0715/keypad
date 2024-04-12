@@ -24,17 +24,18 @@ class InputScreen(Screen):
 
         # 서버 IP 주소 입력창과 라벨을 오른쪽 정렬하는 BoxLayout
         ip_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(None, None), size=(350, 40))
-        ip_label = Label(text='서버 IP 주소(숫자만 입력하세요):', font_name='AppleSDGothicNeoEB', font_size=20, halign='right',
-                         size_hint=(None, None), size=(150, 40))
+        ip_label = Label(text='서버 IP 주소(숫자만 입력하세요):', font_name='AppleSDGothicNeoEB', font_size=20, color=(0,0,0,1),
+                         halign='right', size_hint=(None, None), size=(150, 40))
         self.ip_input = IPInput(multiline=False, size_hint=(None, None), size=(200, 40))
+        # self.ip_input.foreground_color=(0,0,0,1)
         ip_layout.add_widget(ip_label)
         ip_layout.add_widget(self.ip_input)
         ip_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.7}  # 중앙에 배치
 
         # 포트 번호 입력창과 라벨을 오른쪽 정렬하는 BoxLayout
         port_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(None, None), size=(350, 40))
-        port_label = Label(text='포트 번호:', font_name='AppleSDGothicNeoEB', font_size=20, halign='right',
-                           size_hint=(None, None), size=(150, 40))
+        port_label = Label(text='포트 번호:', font_name='AppleSDGothicNeoEB', font_size=20, color=(0,0,0,1),
+                           halign='right', size_hint=(None, None), size=(150, 40))
         self.port_input = TextInput(multiline=False, size_hint=(None, None), size=(100, 40))
         port_layout.add_widget(port_label)
         port_layout.add_widget(self.port_input)
@@ -69,7 +70,7 @@ class InputScreen(Screen):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((HOST, PORT))
                 print("서버에 연결되었습니다.")
-                app.change_to_number_pad_screen()
+                app.change_to_number_pad_screen(s)
         except Exception as e:
             # print("서버 연결에 실패했습니다:", e)
             self.error_label.text = "서버 연결에 실패했습니다: {}".format(e)
@@ -102,9 +103,13 @@ class IPInput(TextInput):
             self.text = self.text[:-1]
 
 class NumberPadScreen(Screen):
-    def __init__(self, display_text='', **kwargs):
+    def __init__(self, button_sounds, display_text='',  server_connection=None, **kwargs):
         super().__init__(**kwargs)
-        self.display_text = display_text  # display_text 속성 초기화
+
+        server_connection = server_connection
+
+        self.button_sounds = button_sounds
+        self.display_text = '010' # display_text 속성 초기화
 
         LabelBase.register(name='AppleSDGothicNeoEB', fn_regular='./AppleSDGothicNeoEB.ttf')
         Window.clearcolor = (1, 1, 1, 1)  # 흰색 배경
@@ -163,19 +168,35 @@ class NumberPadScreen(Screen):
             self.display_label.text = self.display_text
             self.play_button_sound('back')
 
-    def complete_input(self, instance):
+    def complete_input(self, server_connection):
         if len(self.display_text) == 13:
             print("입력된 번호:", self.display_text)
-            self.send_to_server(self.display_text)
+            self.send_to_server(server_connection, self.display_text)
 
             self.display_text = '010-'
             self.play_button_sound('clear')
         else:
             print("입력된 번호는 13자리여야 확인됩니다.")
 
+    def play_button_sound(self, sound_key):
+        if sound_key in self.button_sounds:
+            sound = self.button_sounds[sound_key]
+            if sound:
+                sound.play()
+
+    def set_server_connection(self, server_connection):
+        self.server_connection = server_connection
+    def send_to_server(self, server_conneciton, data):
+        if self.server_connection:
+            self.server_connection.sendall(data.encode())
+        else:
+            print("서버가 없어요")
+
+
 class GalaxyTabApp(App):
     def __init__(self, **kwargs):
         super(GalaxyTabApp, self).__init__(**kwargs)
+        self.server_connection = None
         self.display_text = '010'
         self.button_sounds = {
             '0': SoundLoader.load('0.mp3'),
@@ -198,39 +219,24 @@ class GalaxyTabApp(App):
         font_path = os.path.join(script_dir, "AppleSDGothicNeoEB.ttf")
         LabelBase.register("AppleSDGothicNeoEB", font_path)
 
-
         self.screen_manager = ScreenManager()
 
         self.input_screen = InputScreen(name='input')
-        self.number_pad_screen = NumberPadScreen(name='number_pad')
+        self.number_pad_screen = NumberPadScreen(name='number_pad',
+                                                 button_sounds=self.button_sounds)
 
         self.screen_manager.add_widget(self.input_screen)
         self.screen_manager.add_widget(self.number_pad_screen)
 
         return self.screen_manager
 
-
-
-    def play_button_sound(self, sound_key):
-        if sound_key in self.button_sounds:
-            sound = self.button_sounds[sound_key]
-            if sound:
-                sound.play()
-
-    def send_to_server(self, data):
-        HOST = '192.168.0.2'
-        PORT = 65432
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((HOST, PORT))
-            # print("서버에 연결되었습니다")
-            s.sendall(data.encode())
-
     # def on_stop(self):
     #     # 앱이 종료될 때 서버로 종료 메시지를 보냄
     #     # 서버에서는 이 메시지를 받아 서버를 종료할 수 있도록 구현
     #     pass
 
-    def change_to_number_pad_screen(self):
+    def change_to_number_pad_screen(self, server_connection):
+        self.number_pad_screen.server_connection = self.server_connection
         self.screen_manager.current = 'number_pad'
 
 if __name__ == '__main__':
