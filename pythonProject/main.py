@@ -70,7 +70,7 @@ class InputScreen(Screen):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((HOST, PORT))
                 print("서버에 연결되었습니다.")
-                app.change_to_number_pad_screen(s)
+                app.change_to_number_pad_screen(HOST, PORT)
         except Exception as e:
             # print("서버 연결에 실패했습니다:", e)
             self.error_label.text = "서버 연결에 실패했습니다: {}".format(e)
@@ -103,10 +103,11 @@ class IPInput(TextInput):
             self.text = self.text[:-1]
 
 class NumberPadScreen(Screen):
-    def __init__(self, button_sounds, display_text='',  server_connection=None, **kwargs):
+    def __init__(self, button_sounds, host=None, port=None, display_text='', **kwargs):
         super().__init__(**kwargs)
 
-        server_connection = server_connection
+        self.HOST = host
+        self.PORT = port
 
         self.button_sounds = button_sounds
         self.display_text = '010' # display_text 속성 초기화
@@ -171,8 +172,7 @@ class NumberPadScreen(Screen):
     def complete_input(self, server_connection):
         if len(self.display_text) == 13:
             print("입력된 번호:", self.display_text)
-            self.send_to_server(server_connection, self.display_text)
-
+            self.send_to_server(self.display_text)
             self.display_text = '010-'
             self.play_button_sound('clear')
         else:
@@ -183,20 +183,18 @@ class NumberPadScreen(Screen):
             sound = self.button_sounds[sound_key]
             if sound:
                 sound.play()
-
-    def set_server_connection(self, server_connection):
-        self.server_connection = server_connection
-    def send_to_server(self, server_conneciton, data):
-        if self.server_connection:
-            self.server_connection.sendall(data.encode())
-        else:
-            print("서버가 없어요")
-
+    def send_to_server(self, data):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.HOST, self.PORT))
+            s.sendall(data.encode())
+            self.display_text = '010-'
+            self.display_label.text = self.display_text
 
 class GalaxyTabApp(App):
     def __init__(self, **kwargs):
         super(GalaxyTabApp, self).__init__(**kwargs)
-        self.server_connection = None
+        self.HOST = None
+        self.PORT = None
         self.display_text = '010'
         self.button_sounds = {
             '0': SoundLoader.load('0.mp3'),
@@ -235,8 +233,11 @@ class GalaxyTabApp(App):
     #     # 서버에서는 이 메시지를 받아 서버를 종료할 수 있도록 구현
     #     pass
 
-    def change_to_number_pad_screen(self, server_connection):
-        self.number_pad_screen.server_connection = self.server_connection
+    def change_to_number_pad_screen(self, host, port):
+        self.number_pad_screen.HOST = host
+        self.number_pad_screen.PORT = port
+        self.HOST = host
+        self.PORT = port
         self.screen_manager.current = 'number_pad'
 
 if __name__ == '__main__':
