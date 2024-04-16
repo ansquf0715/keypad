@@ -11,7 +11,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.behaviors import FocusBehavior
+# from kivy.uix.behaviors import FocusBehavior
+from kivy.uix.image import Image
 
 import threading
 
@@ -70,7 +71,8 @@ class InputScreen(Screen):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((HOST, PORT))
                 print("서버에 연결되었습니다.")
-                app.change_to_number_pad_screen(HOST, PORT)
+                # app.change_to_number_pad_screen(HOST, PORT)
+                app.change_to_image_screen(HOST, PORT)
         except Exception as e:
             # print("서버 연결에 실패했습니다:", e)
             self.error_label.text = "서버 연결에 실패했습니다: {}".format(e)
@@ -101,6 +103,19 @@ class IPInput(TextInput):
         elif last_char.isdigit() and len(self.text) in [4, 8, 10]:
             # 맨 뒤에 있는 문자가 숫자이고 특정 위치에 '.'이 있는 경우에는 해당 숫자를 삭제
             self.text = self.text[:-1]
+
+class ImageScreen(Screen):
+    def __init__(self, image_path, **kwargs):
+        super().__init__(**kwargs)
+        self.image_path = image_path
+        self.layout = FloatLayout()
+        self.image = Image(source=self.image_path, allow_stretch=True, keep_ratio=False)
+        self.layout.add_widget(self.image)
+        self.add_widget(self.layout)
+
+    def on_pre_enter(self, *args):
+        #이미지가 화면에 꽉 차도록 크기를 조정합니다.
+        self.image.size = Window.size
 
 class NumberPadScreen(Screen):
     def __init__(self, button_sounds, host=None, port=None, display_text='', **kwargs):
@@ -215,6 +230,7 @@ class GalaxyTabApp(App):
 
         script_dir = os.path.dirname(__file__)
         font_path = os.path.join(script_dir, "AppleSDGothicNeoEB.ttf")
+        image_path = os.path.join(script_dir, "기본사진.png")
         LabelBase.register("AppleSDGothicNeoEB", font_path)
 
         self.screen_manager = ScreenManager()
@@ -223,15 +239,13 @@ class GalaxyTabApp(App):
         self.number_pad_screen = NumberPadScreen(name='number_pad',
                                                  button_sounds=self.button_sounds)
 
+        self.image_screen = ImageScreen(name='image_screen', image_path=image_path)
+
         self.screen_manager.add_widget(self.input_screen)
         self.screen_manager.add_widget(self.number_pad_screen)
+        self.screen_manager.add_widget(self.image_screen) #이미지 스크린을 스크린 매니저에 추가합니다.
 
         return self.screen_manager
-
-    # def on_stop(self):
-    #     # 앱이 종료될 때 서버로 종료 메시지를 보냄
-    #     # 서버에서는 이 메시지를 받아 서버를 종료할 수 있도록 구현
-    #     pass
 
     def change_to_number_pad_screen(self, host, port):
         self.number_pad_screen.HOST = host
@@ -239,6 +253,11 @@ class GalaxyTabApp(App):
         self.HOST = host
         self.PORT = port
         self.screen_manager.current = 'number_pad'
+
+    def change_to_image_screen(self, host, port):
+        self.HOST = host
+        self.PORT = port
+        self.screen_manager.current = 'image_screen'
 
 if __name__ == '__main__':
     GalaxyTabApp().run()
