@@ -11,8 +11,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-# from kivy.uix.behaviors import FocusBehavior
 from kivy.uix.image import Image
+from kivy.clock import mainthread
 
 import threading
 
@@ -59,6 +59,24 @@ class InputScreen(Screen):
 
         self.add_widget(self.layout)
 
+    # def connect(self, instance):
+    #     ip_address = self.ip_input.text
+    #     port_number = int(self.port_input.text)
+    #
+    #     app = App.get_running_app()
+    #
+    #     HOST = ip_address
+    #     PORT = port_number
+    #     try:
+    #         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    #             s.connect((HOST, PORT))
+    #             print("서버에 연결되었습니다.")
+    #             app.change_to_number_pad_screen(HOST, PORT)
+    #             # app.change_to_image_screen(HOST, PORT)
+    #     except Exception as e:
+    #         # print("서버 연결에 실패했습니다:", e)
+    #         self.error_label.text = "서버 연결에 실패했습니다: {}".format(e)
+
     def connect(self, instance):
         ip_address = self.ip_input.text
         port_number = int(self.port_input.text)
@@ -67,15 +85,9 @@ class InputScreen(Screen):
 
         HOST = ip_address
         PORT = port_number
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((HOST, PORT))
-                print("서버에 연결되었습니다.")
-                # app.change_to_number_pad_screen(HOST, PORT)
-                app.change_to_image_screen(HOST, PORT)
-        except Exception as e:
-            # print("서버 연결에 실패했습니다:", e)
-            self.error_label.text = "서버 연결에 실패했습니다: {}".format(e)
+
+        app.set_connection_info(HOST, PORT)
+
 class IPInput(TextInput):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -104,18 +116,18 @@ class IPInput(TextInput):
             # 맨 뒤에 있는 문자가 숫자이고 특정 위치에 '.'이 있는 경우에는 해당 숫자를 삭제
             self.text = self.text[:-1]
 
-class ImageScreen(Screen):
-    def __init__(self, image_path, **kwargs):
-        super().__init__(**kwargs)
-        self.image_path = image_path
-        self.layout = FloatLayout()
-        self.image = Image(source=self.image_path, allow_stretch=True, keep_ratio=False)
-        self.layout.add_widget(self.image)
-        self.add_widget(self.layout)
-
-    def on_pre_enter(self, *args):
-        #이미지가 화면에 꽉 차도록 크기를 조정합니다.
-        self.image.size = Window.size
+# class ImageScreen(Screen):
+#     def __init__(self, image_path, **kwargs):
+#         super().__init__(**kwargs)
+#         self.image_path = image_path
+#         self.layout = FloatLayout()
+#         self.image = Image(source=self.image_path, allow_stretch=True, keep_ratio=False)
+#         self.layout.add_widget(self.image)
+#         self.add_widget(self.layout)
+#
+#     def on_pre_enter(self, *args):
+#         #이미지가 화면에 꽉 차도록 크기를 조정합니다.
+#         self.image.size = Window.size
 
 class NumberPadScreen(Screen):
     def __init__(self, button_sounds, host=None, port=None, display_text='', **kwargs):
@@ -187,7 +199,9 @@ class NumberPadScreen(Screen):
     def complete_input(self, server_connection):
         if len(self.display_text) == 13:
             print("입력된 번호:", self.display_text)
-            self.send_to_server(self.display_text)
+            # self.send_to_server(self.display_text)
+            app = App.get_running_app()
+            app.send_message_to_server(self.display_text)
             self.display_text = '010-'
             self.play_button_sound('clear')
         else:
@@ -225,6 +239,7 @@ class GalaxyTabApp(App):
             'back': SoundLoader.load('back.mp3'),
             'clear': SoundLoader.load('clear.mp3'),
         }
+        self.server_socket=None
 
     def build(self):
 
@@ -239,11 +254,11 @@ class GalaxyTabApp(App):
         self.number_pad_screen = NumberPadScreen(name='number_pad',
                                                  button_sounds=self.button_sounds)
 
-        self.image_screen = ImageScreen(name='image_screen', image_path=image_path)
+        # self.image_screen = ImageScreen(name='image_screen', image_path=image_path)
 
         self.screen_manager.add_widget(self.input_screen)
         self.screen_manager.add_widget(self.number_pad_screen)
-        self.screen_manager.add_widget(self.image_screen) #이미지 스크린을 스크린 매니저에 추가합니다.
+        # self.screen_manager.add_widget(self.image_screen) #이미지 스크린을 스크린 매니저에 추가합니다.
 
         return self.screen_manager
 
@@ -254,10 +269,66 @@ class GalaxyTabApp(App):
         self.PORT = port
         self.screen_manager.current = 'number_pad'
 
-    def change_to_image_screen(self, host, port):
+    # def change_to_image_screen(self, host, port):
+    #     self.HOST = host
+    #     self.PORT = port
+    #     self.screen_manager.current = 'image_screen'
+
+    def set_connection_info(self, host, port):
         self.HOST = host
         self.PORT = port
-        self.screen_manager.current = 'image_screen'
+        self.connect_to_server(host, port)
+
+    def connect_to_server(self, host, port):
+        self.HOST = host
+        self.PORT = port
+        try:
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket.connect((self.HOST, self.PORT))
+            print("서버에 연결되었습니다")
+            self.change_to_number_pad_screen(self.HOST, self.PORT)
+            # self.change_to_image_screen(self.HOST, self.PORT)
+
+            #서버로부터 메시지를 받는 스레드 시작
+            receive_thread = threading.Thread(target=self.receive_messages_from_server)
+            receive_thread.daemon = True
+            receive_thread.start()
+        except Exception as e:
+            print("서버 연결에 실패했습니다:", e)
+
+    def send_message_to_server(self, message):
+        try:
+            if self.server_socket:
+                self.server_socket.sendall(message.encode())
+                print("메시지 전송 성공:", message)
+                # self.change_to_image_screen(self.HOST, self.PORT)
+            else:
+                print("서버에 연결되어 있지 않습니다.")
+        except Exception as e:
+            print("메시지 전송 실패", e)
+
+    @mainthread
+    def process_server_message(self, message):
+        print("서버로부터 온 메시지:", message)
+        if message == "change_to_number_pad_screen":
+            self.change_to_number_pad_screen(self.HOST, self.PORT)
+
+    def receive_messages_from_server(self):
+        while True:
+            try:
+                if self.server_socket:
+                    data = self.server_socket.recv(1024).decode()
+                    if data:
+                        self.process_server_message(data)
+                        # if data == "change_to_number_pad_screen":
+                        #     # self.change_to_image_screen(self.HOST, self.PORT)
+                        #     self.change_to_number_pad_screen(self.HOST, self.PORT)
+                else:
+                    print("서버에 연결되어 있지 않습니다.")
+                    break
+            except Exception as e:
+                print("메시지 수신 중 오류 발생:", e)
+                break
 
 if __name__ == '__main__':
     GalaxyTabApp().run()

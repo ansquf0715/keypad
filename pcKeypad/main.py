@@ -60,18 +60,22 @@ class Server(QObject):
                 self.message_received.emit(message)
 
     def send_message_to_client(self, message):
-        # print('send message to client 함수 호출')
-        print("Connected clients: ", self.client_sockets)
-        for client_socket in self.client_sockets:
+        print('send message to client 함수 호출')
+        if self.client_sockets:
+            print('self.client_sockets는 되나 ')
+            tablet_client = self.client_sockets[0]
+            print('tablet client:', tablet_client)
             try:
-                client_socket.sendall(message.encode())
+                print('try문에 걸리나')
+                tablet_client.sendall(message.encode())
+                print("Message sent to tablet:", message)
             except Exception as e:
-                print("Error while sending message to client: ", e)
+                print("Error while sending message to tablet:", e)
 
     def stop_server(self):
         # self.running = False
         self.stop_flag=True
-        # print('stop server 함수가 호출된다')
+        print('stop server 함수가 호출된다')
         # print('stop flag', self.stop_flag)
         # print('client sockets', self.client_sockets)
         #서버 소켓을 닫기 전에 모든 클라이언트와의 연결을 먼저 종료
@@ -105,6 +109,10 @@ class MyApp(QWidget):
         self.port_label.setFont(font)
         self.port_label.setAlignment(Qt.AlignCenter)  # 가운데 정렬 설정
 
+        self.received_message_label = QLabel("")
+        self.received_message_label.setFont(font)
+        self.received_message_label.setAlignment(Qt.AlignCenter)
+
         self.btn_copy = QPushButton('복사', self)
         self.btn_copy.setVisible(False)
 
@@ -115,6 +123,7 @@ class MyApp(QWidget):
         v_layout = QVBoxLayout()
         v_layout.addWidget(self.ip_label)
         v_layout.addWidget(self.port_label)
+        v_layout.addWidget(self.received_message_label)
         v_layout.addWidget(self.btn_receive)
 
         # 포트 라벨과 버튼 사이의 간격을 조정
@@ -138,27 +147,41 @@ class MyApp(QWidget):
         print('server: ', self.server)
 
     def show_received_message(self, message):
-        self.server_info_label.setText(message)
+        # print('show received message 함수')
+        #
+        self.ip_label.hide()
+        self.port_label.hide()
+
+        self.received_message_label.setText(message)
+        # self.received_message_label.setAlignment(Qt.AlignCenter)
+
         #수신된 데이터가 표시될 때만 버튼을 보이도록 설정
-        self.btn.setVisible(True)
+        # self.btn.setVisible(True)
+        self.btn_copy.setVisible(True)
 
     def btnClicked(self):
         # print('버튼이 클릭되었습니다!')
         #클립보드에 수신된 데이터 저장
         clipboard = QApplication.clipboard()
-        clipboard.setText(self.server_info_label.text().replace('\n', '\r\n'))
+        # clipboard.setText(self.received_message_label.text().replace('\n', '\r\n'))
+        clipboard.setText(self.received_message_label.text().replace('\n', '\r\n'))
         # print('수신된 데이터가 클립보드에 저장되었습니다!')
 
     def sendSignalToClients(self):
         print("send signal to Clients")
-        message = "number_pad screen"
+        message = "change_to_number_pad_screen" #변경할 화면을 나타냄
         # server.send_message_to_client(message)
         if self.server:
             self.server.send_message_to_client(message)
     def closeEvent(self, event):
-        server.stop_server()
+        # server.stop_server()
         # event.accept()
         # print('closeEvent 함수가 호출된다')
+        #애플리케이션이 종료될 때 서버를 정상적으로 종료하고 스레드 정리
+        if self.server:
+            self.server.stop_server()
+            server_thread.join()
+        event.accept()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
@@ -175,6 +198,7 @@ if __name__ == '__main__':
     server = Server(socket.gethostbyname(socket.gethostname()), random_port, ex)
     ex.server = server
     server.message_received.connect(ex.show_received_message)
+    # server.message_received.connect(lambda message: print("Received:", message))
     server_thread = threading.Thread(target=server.start_server)
     server_thread.start()
 
