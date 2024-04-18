@@ -1,5 +1,6 @@
 import socket
 import os
+import threading
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -11,10 +12,15 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.textinput import TextInput
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.image import Image
 from kivy.clock import mainthread
+from kivy.config import Config
 
-import threading
+#화면 크기 설정
+Config.set('graphics', 'fullscreen', 'auto')
+#화면 가로 세로 비율 유지
+Config.set('graphics', 'allow_screensaver', 0)
+Config.set('graphics', 'resizable', 0)
+Config.set('graphics', 'borderless',1)
 
 class InputScreen(Screen):
     def __init__(self, **kwargs):
@@ -25,13 +31,17 @@ class InputScreen(Screen):
 
         # 서버 IP 주소 입력창과 라벨을 오른쪽 정렬하는 BoxLayout
         ip_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(None, None), size=(350, 40))
-        ip_label = Label(text='서버 IP 주소(숫자만 입력하세요):', font_name='AppleSDGothicNeoEB', font_size=20, color=(0,0,0,1),
+        ip_label = Label(text='IP 주소:', font_name='AppleSDGothicNeoEB', font_size=20, color=(0,0,0,1),
                          halign='right', size_hint=(None, None), size=(150, 40))
-        self.ip_input = IPInput(multiline=False, size_hint=(None, None), size=(200, 40))
-        # self.ip_input.foreground_color=(0,0,0,1)
+        self.ip_input = TextInput(multiline=False, size_hint=(None, None), size=(200,40))
         ip_layout.add_widget(ip_label)
         ip_layout.add_widget(self.ip_input)
         ip_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.7}  # 중앙에 배치
+
+        #ip주소 불러오기 버튼
+        ip_button = Button(text='이전 주소 불러오기', on_press=self.on_ip_button_press,font_name='AppleSDGothicNeoEB',
+                           size_hint=(None, None), size=(130, 40))
+        ip_button.pos_hint = {'center_x':0.85, 'center_y':0.7} #오른쪽에 배치
 
         # 포트 번호 입력창과 라벨을 오른쪽 정렬하는 BoxLayout
         port_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint=(None, None), size=(350, 40))
@@ -44,7 +54,7 @@ class InputScreen(Screen):
 
         # 연결 버튼
         self.connect_button = Button(text='연결', on_press=self.connect, font_name='AppleSDGothicNeoEB',
-                                     size_hint=(None, None), size=(100, 40))
+                                     size_hint=(None, None), size=(150, 50))
         self.connect_button.pos_hint = {'center_x': 0.5, 'center_y': 0.3}  # 중앙에 배치
 
         # 오류 메시지 텍스트
@@ -53,29 +63,12 @@ class InputScreen(Screen):
 
         # 레이아웃에 위젯 추가
         self.layout.add_widget(ip_layout)
+        self.layout.add_widget(ip_button)
         self.layout.add_widget(port_layout)
         self.layout.add_widget(self.connect_button)
         self.layout.add_widget(self.error_label)
 
         self.add_widget(self.layout)
-
-    # def connect(self, instance):
-    #     ip_address = self.ip_input.text
-    #     port_number = int(self.port_input.text)
-    #
-    #     app = App.get_running_app()
-    #
-    #     HOST = ip_address
-    #     PORT = port_number
-    #     try:
-    #         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    #             s.connect((HOST, PORT))
-    #             print("서버에 연결되었습니다.")
-    #             app.change_to_number_pad_screen(HOST, PORT)
-    #             # app.change_to_image_screen(HOST, PORT)
-    #     except Exception as e:
-    #         # print("서버 연결에 실패했습니다:", e)
-    #         self.error_label.text = "서버 연결에 실패했습니다: {}".format(e)
 
     def connect(self, instance):
         ip_address = self.ip_input.text
@@ -88,53 +81,28 @@ class InputScreen(Screen):
 
         app.set_connection_info(HOST, PORT)
 
-class IPInput(TextInput):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.max_chars = 12  # 최대 12자까지 입력
-    def insert_text(self, substring, from_undo=False):
-        if len(self.text) in [3, 7, 9] and substring.isdigit():
-            # 특정 위치에 '.' 추가
-            substring = '.' + substring
-        super(IPInput, self).insert_text(substring, from_undo=from_undo)
+    def on_ip_button_press(self, instance):
+        try:
+            # Get the path to the ip_addresses.txt file within the project directory
+            script_dir = os.path.dirname(__file__)
+            file_path = os.path.join(script_dir, "ip_addresses.txt")
 
-    def do_backspace(self, from_undo=False, mode='bkspc'):
-        # 부모 클래스의 do_backspace 메서드 호출
-        super(IPInput, self).do_backspace(from_undo=from_undo, mode=mode)
+            # Check if the file exists and is not empty
+            if os.path.isfile(file_path) and os.path.getsize(file_path) > 0:
+                # Read the last line from the file
+                with open(file_path, "r") as file:
+                    last_ip_address = file.readlines()[-1].strip()
 
-        # 텍스트가 빈 경우에는 추가적인 처리를 하지 않음
-        if not self.text:
-            return
-
-        # 텍스트가 빈 경우가 아니면 맨 뒤에 있는 문자를 확인하여 처리
-        last_char = self.text[-1]
-
-        if last_char == '.':
-            # 맨 뒤에 있는 문자가 '.'인 경우에는 마지막 '.'을 삭제
-            self.text = self.text[:-1]
-        elif last_char.isdigit() and len(self.text) in [4, 8, 10]:
-            # 맨 뒤에 있는 문자가 숫자이고 특정 위치에 '.'이 있는 경우에는 해당 숫자를 삭제
-            self.text = self.text[:-1]
-
-# class ImageScreen(Screen):
-#     def __init__(self, image_path, **kwargs):
-#         super().__init__(**kwargs)
-#         self.image_path = image_path
-#         self.layout = FloatLayout()
-#         self.image = Image(source=self.image_path, allow_stretch=True, keep_ratio=False)
-#         self.layout.add_widget(self.image)
-#         self.add_widget(self.layout)
-#
-#     def on_pre_enter(self, *args):
-#         #이미지가 화면에 꽉 차도록 크기를 조정합니다.
-#         self.image.size = Window.size
+                # Set the last IP address to the input field
+                self.ip_input.text = last_ip_address
+            else:
+                self.error_label.text = "저장된 IP 주소가 없습니다."
+        except Exception as e:
+            self.error_label.text = "IP 주소를 불러오는 동안 오류가 발생했습니다: {}".format(str(e))
 
 class NumberPadScreen(Screen):
-    def __init__(self, button_sounds, host=None, port=None, display_text='', **kwargs):
+    def __init__(self, button_sounds, display_text='', **kwargs):
         super().__init__(**kwargs)
-
-        self.HOST = host
-        self.PORT = port
 
         self.button_sounds = button_sounds
         self.display_text = '010' # display_text 속성 초기화
@@ -198,28 +166,18 @@ class NumberPadScreen(Screen):
 
     def complete_input(self, server_connection):
         if len(self.display_text) == 13:
-            print("입력된 번호:", self.display_text)
-            # self.send_to_server(self.display_text)
+            # print("입력된 번호:", self.display_text)
             app = App.get_running_app()
-            # cleaned_text = self.display_text[:3] + self.display_text[4:8] + self.display_text[9:]
             app.send_message_to_server(self.display_text)
-            # app.send_message_to_server(cleaned_text)
-            # self.display_text = '010-'
             self.play_button_sound('clear')
-        else:
-            print("입력된 번호는 13자리여야 확인됩니다.")
+        # else:
+        #     print("입력된 번호는 13자리여야 확인됩니다.")
 
     def play_button_sound(self, sound_key):
         if sound_key in self.button_sounds:
             sound = self.button_sounds[sound_key]
             if sound:
                 sound.play()
-    # def send_to_server(self, data):
-    #     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    #         s.connect((self.HOST, self.PORT))
-    #         s.sendall(data.encode())
-    #         self.display_text = '010-'
-    #         self.display_label.text = self.display_text
 
 class GalaxyTabApp(App):
     def __init__(self, **kwargs):
@@ -247,7 +205,6 @@ class GalaxyTabApp(App):
 
         script_dir = os.path.dirname(__file__)
         font_path = os.path.join(script_dir, "AppleSDGothicNeoEB.ttf")
-        image_path = os.path.join(script_dir, "기본사진.png")
         LabelBase.register("AppleSDGothicNeoEB", font_path)
 
         self.screen_manager = ScreenManager()
@@ -256,25 +213,13 @@ class GalaxyTabApp(App):
         self.number_pad_screen = NumberPadScreen(name='number_pad',
                                                  button_sounds=self.button_sounds)
 
-        # self.image_screen = ImageScreen(name='image_screen', image_path=image_path)
-
         self.screen_manager.add_widget(self.input_screen)
         self.screen_manager.add_widget(self.number_pad_screen)
-        # self.screen_manager.add_widget(self.image_screen) #이미지 스크린을 스크린 매니저에 추가합니다.
 
         return self.screen_manager
 
-    def change_to_number_pad_screen(self, host, port):
-        self.number_pad_screen.HOST = host
-        self.number_pad_screen.PORT = port
-        self.HOST = host
-        self.PORT = port
+    def change_to_number_pad_screen(self):
         self.screen_manager.current = 'number_pad'
-
-    # def change_to_image_screen(self, host, port):
-    #     self.HOST = host
-    #     self.PORT = port
-    #     self.screen_manager.current = 'image_screen'
 
     def set_connection_info(self, host, port):
         self.HOST = host
@@ -287,9 +232,10 @@ class GalaxyTabApp(App):
         try:
             self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server_socket.connect((self.HOST, self.PORT))
-            print("서버에 연결되었습니다")
-            self.change_to_number_pad_screen(self.HOST, self.PORT)
-            # self.change_to_image_screen(self.HOST, self.PORT)
+            # print("서버에 연결되었습니다")
+            #연결에 성공했으므로 IP 주소를 텍스트 파일에 저장
+            self.save_ip_address_to_file(host)
+            self.change_to_number_pad_screen()
 
             #서버로부터 메시지를 받는 스레드 시작
             receive_thread = threading.Thread(target=self.receive_messages_from_server)
@@ -298,20 +244,36 @@ class GalaxyTabApp(App):
         except Exception as e:
             print("서버 연결에 실패했습니다:", e)
 
+    def save_ip_address_to_file(self, host):
+        try:
+            # Get the path to the ip_addresses.txt file within the project directory
+            script_dir = os.path.dirname(__file__)
+            file_path = os.path.join(script_dir, "ip_addresses.txt")
+
+            # Check if the IP address already exists in the file
+            with open(file_path, "r") as file:
+                existing_addresses = file.readlines()
+                if host + "\n" not in existing_addresses:
+                    # Open the text file in append mode and write the IP address
+                    with open(file_path, "a") as file:
+                        file.write(host + "\n")
+        except Exception as e:
+            print("IP 주소를 저장하는 동안 오류가 발생했습니다:", e)
+
     def send_message_to_server(self, message):
         try:
             if self.server_socket:
                 self.server_socket.sendall(message.encode())
-                print("메시지 전송 성공:", message)
+                # print("메시지 전송 성공:", message)
                 # self.change_to_image_screen(self.HOST, self.PORT)
-            else:
-                print("서버에 연결되어 있지 않습니다.")
+            # else:
+            #     print("서버에 연결되어 있지 않습니다.")
         except Exception as e:
             print("메시지 전송 실패", e)
 
     @mainthread
     def process_server_message(self, message):
-        print("서버로부터 온 메시지:", message)
+        # print("서버로부터 온 메시지:", message)
         if message == "Erase":
             # self.change_to_number_pad_screen(self.HOST, self.PORT)
             number_pad_screen = self.screen_manager.get_screen('number_pad')
@@ -326,11 +288,8 @@ class GalaxyTabApp(App):
                     data = self.server_socket.recv(1024).decode()
                     if data:
                         self.process_server_message(data)
-                        # if data == "change_to_number_pad_screen":
-                        #     # self.change_to_image_screen(self.HOST, self.PORT)
-                        #     self.change_to_number_pad_screen(self.HOST, self.PORT)
                 else:
-                    print("서버에 연결되어 있지 않습니다.")
+                    # print("서버에 연결되어 있지 않습니다.")
                     break
             except Exception as e:
                 print("메시지 수신 중 오류 발생:", e)
