@@ -4,7 +4,7 @@ import threading
 import sys
 import random
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
-from PyQt5.QtCore import pyqtSignal, QObject, Qt, QThread
+from PyQt5.QtCore import pyqtSignal, QObject, Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
 class Server(QObject):
@@ -92,7 +92,7 @@ class MyApp(QWidget):
         self.server = None
 
     def initUI(self):
-        self.setWindowTitle('My PyQt App')
+        self.setWindowTitle('PC KEYPAD')
         self.setGeometry(400, 400, 400, 400)
 
         # 폰트 설정
@@ -115,15 +115,22 @@ class MyApp(QWidget):
 
         self.btn_copy = QPushButton('복사', self)
         self.btn_copy.setVisible(False)
+        self.btn_copy.setFixedSize(100,50)
 
-        self.btn_receive = QPushButton('입력 받기', self)
-        self.btn_receive.setVisible(True)
+        self.btn_receive = QPushButton('번호 지우기', self)
+        self.btn_receive.setVisible(False)
+        self.btn_receive.setFixedSize(300, 50)
+
+        #라벨과 버튼을 포함하는 수평 레이아웃 생성
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(self.received_message_label)
+        h_layout.addWidget(self.btn_copy)
 
         # 수직 레이아웃 생성하여 라벨 및 버튼 추가
         v_layout = QVBoxLayout()
         v_layout.addWidget(self.ip_label)
         v_layout.addWidget(self.port_label)
-        v_layout.addWidget(self.received_message_label)
+        v_layout.addLayout(h_layout)
         v_layout.addWidget(self.btn_receive)
 
         # 포트 라벨과 버튼 사이의 간격을 조정
@@ -158,18 +165,25 @@ class MyApp(QWidget):
         #수신된 데이터가 표시될 때만 버튼을 보이도록 설정
         # self.btn.setVisible(True)
         self.btn_copy.setVisible(True)
+        self.btn_receive.setVisible(True)
 
     def btnClicked(self):
         # print('버튼이 클릭되었습니다!')
+        #클립보드에 저장할 텍스트
+        original_text = self.received_message_label.text()
+        #하이픈 제거
+        modified_text = original_text[:3]+original_text[4:8]+original_text[9:]
+
         #클립보드에 수신된 데이터 저장
         clipboard = QApplication.clipboard()
         # clipboard.setText(self.received_message_label.text().replace('\n', '\r\n'))
-        clipboard.setText(self.received_message_label.text().replace('\n', '\r\n'))
+        clipboard.setText(modified_text.replace('\n', '\r\n'))
         # print('수신된 데이터가 클립보드에 저장되었습니다!')
 
     def sendSignalToClients(self):
         print("send signal to Clients")
-        message = "change_to_number_pad_screen" #변경할 화면을 나타냄
+        # message = "change_to_number_pad_screen" #변경할 화면을 나타냄
+        message = "Erase"
         # server.send_message_to_client(message)
         if self.server:
             self.server.send_message_to_client(message)
@@ -180,7 +194,7 @@ class MyApp(QWidget):
         #애플리케이션이 종료될 때 서버를 정상적으로 종료하고 스레드 정리
         if self.server:
             self.server.stop_server()
-            server_thread.join()
+            # server_thread.join()
         event.accept()
 
 if __name__ == '__main__':

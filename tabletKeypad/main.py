@@ -201,8 +201,10 @@ class NumberPadScreen(Screen):
             print("입력된 번호:", self.display_text)
             # self.send_to_server(self.display_text)
             app = App.get_running_app()
+            # cleaned_text = self.display_text[:3] + self.display_text[4:8] + self.display_text[9:]
             app.send_message_to_server(self.display_text)
-            self.display_text = '010-'
+            # app.send_message_to_server(cleaned_text)
+            # self.display_text = '010-'
             self.play_button_sound('clear')
         else:
             print("입력된 번호는 13자리여야 확인됩니다.")
@@ -212,12 +214,12 @@ class NumberPadScreen(Screen):
             sound = self.button_sounds[sound_key]
             if sound:
                 sound.play()
-    def send_to_server(self, data):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.HOST, self.PORT))
-            s.sendall(data.encode())
-            self.display_text = '010-'
-            self.display_label.text = self.display_text
+    # def send_to_server(self, data):
+    #     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    #         s.connect((self.HOST, self.PORT))
+    #         s.sendall(data.encode())
+    #         self.display_text = '010-'
+    #         self.display_label.text = self.display_text
 
 class GalaxyTabApp(App):
     def __init__(self, **kwargs):
@@ -310,8 +312,12 @@ class GalaxyTabApp(App):
     @mainthread
     def process_server_message(self, message):
         print("서버로부터 온 메시지:", message)
-        if message == "change_to_number_pad_screen":
-            self.change_to_number_pad_screen(self.HOST, self.PORT)
+        if message == "Erase":
+            # self.change_to_number_pad_screen(self.HOST, self.PORT)
+            number_pad_screen = self.screen_manager.get_screen('number_pad')
+            if number_pad_screen:
+                number_pad_screen.display_text = '010-'
+                number_pad_screen.display_label.text = number_pad_screen.display_text
 
     def receive_messages_from_server(self):
         while True:
