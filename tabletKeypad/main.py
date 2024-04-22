@@ -170,6 +170,8 @@ class NumberPadScreen(Screen):
             app = App.get_running_app()
             app.send_message_to_server(self.display_text)
             self.play_button_sound('clear')
+        # else:
+        #     print("입력된 번호는 13자리여야 확인됩니다.")
 
     def play_button_sound(self, sound_key):
         if sound_key in self.button_sounds:

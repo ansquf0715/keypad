@@ -2,6 +2,7 @@ import errno
 import socket
 import threading
 import sys
+import serial #pySerial 라이브러리 추가
 import random
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
@@ -12,47 +13,63 @@ class Server(QObject):
 
     def __init__(self, host, port, main_widget):
         super().__init__()
-        self.host = host
+        # self.host = host
         self.port = port
         self.main_widget = main_widget
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_sockets = [] #연결된 클라이언트 소켓을 추적하기 위한 리스트
+        self.serial_port = serial.Serial(str(port), 9600) #시리얼 포트 설정
+        # self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.client_sockets = [] #연결된 클라이언트 소켓을 추적하기 위한 리스트
         self.stop_flag = False
         self.lock = threading.Lock()
 
     def start_server(self):
-        self.server_socket.bind((self.host, self.port))
-        self.server_socket.listen()
-
-        # print("서버가 시작되었습니다.")
-        # print(f"서버의 IP 주소: {self.host}")
-        # print(f"서버의 포트 번호: {self.port}")
-
-        self.main_widget.show_server_info(self.host, self.port)
+        # 시리얼 포트가 열렸는지 확인
+        if not self.serial_port.is_open:
+            print("Serial port is not open.")
+            return
 
         while not self.stop_flag:
-            # print('stop flag', self.stop_flag)
             try:
-                conn, addr = self.server_socket.accept()
-                print('Connected by', addr)
-                self.client_sockets.append(conn) #연결된 클라이언트 소켓을 리스트에 추가
-                threading.Thread(target=self.handle_client, args=(conn,)).start()
-            except OSError as e:
-                if e.errno == errno.EINVAL:
-                    #소켓이 이미 닫혔는데도 accept() 호출을 시도한 경우
-                    break
-                else:
-                    raise
+                data = self.serial_port.readline().decode().strip()  # 데이터 수신
+                if data:
+                    print("Received:", data)
+                    self.message_received.emit(data)  # 수신된 데이터를 PyQt 애플리케이션에 전달
+            except Exception as e:
+                print("Error while receiving data:", e)
 
-    def handle_client(self, conn):
-        with conn:
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break
-                message = data.decode()
-                # print('수신된 데이터:', message)
-                self.message_received.emit(message)
+    # def start_server(self):
+    #     self.server_socket.bind((self.host, self.port))
+    #     self.server_socket.listen()
+    #
+    #     # print("서버가 시작되었습니다.")
+    #     # print(f"서버의 IP 주소: {self.host}")
+    #     # print(f"서버의 포트 번호: {self.port}")
+    #
+    #     self.main_widget.show_server_info(self.host, self.port)
+    #
+    #     while not self.stop_flag:
+    #         # print('stop flag', self.stop_flag)
+    #         try:
+    #             conn, addr = self.server_socket.accept()
+    #             print('Connected by', addr)
+    #             self.client_sockets.append(conn) #연결된 클라이언트 소켓을 리스트에 추가
+    #             threading.Thread(target=self.handle_client, args=(conn,)).start()
+    #         except OSError as e:
+    #             if e.errno == errno.EINVAL:
+    #                 #소켓이 이미 닫혔는데도 accept() 호출을 시도한 경우
+    #                 break
+    #             else:
+    #                 raise
+
+    # def handle_client(self, conn):
+    #     with conn:
+    #         while True:
+    #             data = conn.recv(1024)
+    #             if not data:
+    #                 break
+    #             message = data.decode()
+    #             # print('수신된 데이터:', message)
+    #             self.message_received.emit(message)
 
     # def send_message_to_client(self, message):
     #     if self.client_sockets:
@@ -63,31 +80,43 @@ class Server(QObject):
     #         except Exception as e:
     #             print("Error while sending message to tablet:", e)
 
+    # def send_message_to_client(self, message):
+    #     with self.lock:
+    #         for client_socket in self.client_sockets:
+    #             try:
+    #                 client_socket.sendall(message.encode())
+    #             except Exception as e:
+    #                 print("Error while sending message to client:", e)
+
     def send_message_to_client(self, message):
-        with self.lock:
-            for client_socket in self.client_sockets:
-                try:
-                    client_socket.sendall(message.encode())
-                except Exception as e:
-                    print("Error while sending message to client:", e)
+        # 데이터를 시리얼 포트를 통해 클라이언트에 전송
+        try:
+            self.serial_port.write(message.encode())
+        except Exception as e:
+            print("Error while sending message to client:", e)
+
+    # def stop_server(self):
+    #     self.stop_flag=True
+    #     # print('stop flag', self.stop_flag)
+    #     # print('client sockets', self.client_sockets)
+    #
+    #     # #서버 소켓을 닫기 전에 모든 클라이언트와의 연결을 먼저 종료
+    #     # for client_socket in self.client_sockets:
+    #     #     client_socket.close()
+    #     # self.client_sockets = [] #모든 클라이언트 소켓 비우기
+    #
+    #     with self.lock:
+    #         # 서버 소켓을 닫기 전에 모든 클라이언트와의 연결을 먼저 종료
+    #         for client_socket in self.client_sockets:
+    #             client_socket.close()
+    #         self.client_sockets = []  # 모든 클라이언트 소켓 비우기
+    #
+    #     self.server_socket.close()
 
     def stop_server(self):
-        self.stop_flag=True
-        # print('stop flag', self.stop_flag)
-        # print('client sockets', self.client_sockets)
-
-        # #서버 소켓을 닫기 전에 모든 클라이언트와의 연결을 먼저 종료
-        # for client_socket in self.client_sockets:
-        #     client_socket.close()
-        # self.client_sockets = [] #모든 클라이언트 소켓 비우기
-
-        with self.lock:
-            # 서버 소켓을 닫기 전에 모든 클라이언트와의 연결을 먼저 종료
-            for client_socket in self.client_sockets:
-                client_socket.close()
-            self.client_sockets = []  # 모든 클라이언트 소켓 비우기
-
-        self.server_socket.close()
+        self.stop_flag = True
+        if self.serial_port.is_open:
+            self.serial_port.close()
 
 class MyApp(QWidget):
     def __init__(self):
@@ -205,7 +234,8 @@ if __name__ == '__main__':
     ex.show()
 
     #통상적으로 사용되는 포트 번호 범위: 1024-49151
-    random_port = random.randint(1024, 49151)
+    # random_port = random.randint(1024, 49151)
+    random_port = 65432
 
     server = Server(socket.gethostbyname(socket.gethostname()), random_port, ex)
     ex.server = server
