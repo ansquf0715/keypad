@@ -1,12 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-block_cipher = None
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('AppleSDGothicNeoEB.ttf', '.'), ('pc-Icon.ico', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -23,8 +22,6 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    #아이콘 설정
-    icon='pc-Icon.ico',
     name='pcKeypad.exe',
     debug=False,
     bootloader_ignore_signals=False,
@@ -38,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='pc-Icon.ico'
 )

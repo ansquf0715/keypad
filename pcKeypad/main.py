@@ -73,6 +73,15 @@ class Server(QObject):
                 except Exception as e:
                     print("Error while sending message to client:", e)
 
+    def remove_firewall_rule(self, port):
+        if platform.system() == "Windows":
+            command = f'Remove-NetFirewallRule -DisplayName "Allow TCP Port {port}"'
+            subprocess.Popen(["powershell", "-Command", command], shell=False, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+            print(f"포트 {port}에 대한 방화벽 규칙을 삭제했습니다.")
+        else:
+            print("Windows 운영체제가 아닙니다. 방화벽 규칙을 삭제할 수 없습니다.")
+
     def stop_server(self):
         self.stop_flag=True
         # print('stop flag', self.stop_flag)
@@ -94,6 +103,7 @@ class Server(QObject):
             self.client_sockets = []  # 모든 클라이언트 소켓 비우기
 
         self.server_socket.close()
+        self.remove_firewall_rule(self.port)
 
 class MyApp(QWidget):
     def __init__(self):
@@ -171,11 +181,12 @@ class MyApp(QWidget):
         self.btn_copy.clicked.connect(self.btnClicked)
 
     def add_firewall_rule(self):
-        #방화벽 규칙 추가
+        # 방화벽 규칙 추가
         port_to_allow = 65432
         if platform.system() == "Windows":
             command = f'New-NetFirewallRule -DisplayName "Allow TCP Port {port_to_allow}" -Direction Inbound -Protocol TCP -LocalPort {port_to_allow} -Action Allow'
-            subprocess.run(["powershell", "-Command", command], shell=True)
+            subprocess.Popen(["powershell", "-Command", command], shell=False, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
             print(f"포트 {port_to_allow}를 방화벽에서 허용했습니다.")
         else:
             print("Windows 운영체제가 아닙니다. 방화벽 규칙을 추가할 수 없습니다.")
