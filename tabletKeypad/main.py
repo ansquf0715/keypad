@@ -186,18 +186,18 @@ class GalaxyTabApp(App):
         self.PORT = None
         self.display_text = '010'
         self.button_sounds = {
-            '0': SoundLoader.load('0.mp3'),
-            '1': SoundLoader.load('1.mp3'),
-            '2': SoundLoader.load('2.mp3'),
-            '3': SoundLoader.load('3.mp3'),
-            '4': SoundLoader.load('4.mp3'),
-            '5': SoundLoader.load('5.mp3'),
-            '6': SoundLoader.load('6.mp3'),
-            '7': SoundLoader.load('7.mp3'),
-            '8': SoundLoader.load('8.mp3'),
-            '9': SoundLoader.load('9.mp3'),
-            'back': SoundLoader.load('back.mp3'),
-            'clear': SoundLoader.load('clear.mp3'),
+            '0': SoundLoader.load('0.wav'),
+            '1': SoundLoader.load('1.wav'),
+            '2': SoundLoader.load('2.wav'),
+            '3': SoundLoader.load('3.wav'),
+            '4': SoundLoader.load('4.wav'),
+            '5': SoundLoader.load('5.wav'),
+            '6': SoundLoader.load('6.wav'),
+            '7': SoundLoader.load('7.wav'),
+            '8': SoundLoader.load('8.wav'),
+            '9': SoundLoader.load('9.wav'),
+            'back': SoundLoader.load('back.wav'),
+            'clear': SoundLoader.load('clear.wav'),
         }
         self.server_socket=None
 
@@ -253,10 +253,16 @@ class GalaxyTabApp(App):
             # Check if the IP address already exists in the file
             with open(file_path, "r") as file:
                 existing_addresses = file.readlines()
-                if host + "\n" not in existing_addresses:
-                    # Open the text file in append mode and write the IP address
+                # if host + "\n" not in existing_addresses:
+                #     # Open the text file in append mode and write the IP address
+                #     with open(file_path, "a") as file:
+                #         file.write(host + "\n")
+                if existing_addresses and existing_addresses[-1]!=host+"\n":
                     with open(file_path, "a") as file:
-                        file.write(host + "\n")
+                        file.wirte(host+"\n")
+                elif not existing_addresses:
+                    with open(file_path, "a") as file:
+                        file.write(host+"\n")
         except Exception as e:
             print("IP 주소를 저장하는 동안 오류가 발생했습니다:", e)
 

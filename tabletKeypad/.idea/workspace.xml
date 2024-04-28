@@ -1,35 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="523216b0-4a6e-4300-aed2-2591cd9f922a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/pythonProject.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/Analysis-00.toc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/COLLECT-00.toc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/EXE-00.toc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/PKG-00.toc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/PYZ-00.pyz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/PYZ-00.toc" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/base_library.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/tablet Keypad.pkg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/warn-tablet Keypad.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/tablet Keypad/xref-tablet Keypad.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/VCRUNTIME140.dll" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/_bz2.pyd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/_decimal.pyd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/_hashlib.pyd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/_lzma.pyd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/_socket.pyd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/base_library.zip" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/libcrypto-1_1.dll" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/python310.dll" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/select.pyd" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/tablet Keypad/_internal/unicodedata.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/tabletKeypad.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/tabletKeypad.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/0.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/1.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/2.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/3.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/4.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/5.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/6.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/7.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/8.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/9.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/back.mp3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clear.mp3" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tablet Keypad.spec" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,6 +41,10 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "main",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
     "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
     "vue.rearranger.settings.migration": "true"
   }
@@ -63,10 +58,14 @@
       <option name="presentableId" value="Default" />
       <updated>1713812262333</updated>
       <workItem from="1713812263938" duration="245000" />
+      <workItem from="1714293852841" duration="1261000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/main_py$main.coverage" NAME="main Coverage Results" MODIFIED="1714294654809" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
