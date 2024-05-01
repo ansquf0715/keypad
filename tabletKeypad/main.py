@@ -1,6 +1,9 @@
 import socket
+import platform
 import os
+import sys
 import threading
+import subprocess
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
@@ -14,6 +17,10 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.clock import mainthread
 from kivy.config import Config
+from kivy import platform
+
+
+
 
 #화면 크기 설정
 Config.set('graphics', 'fullscreen', 'auto')
@@ -100,6 +107,9 @@ class InputScreen(Screen):
         except Exception as e:
             self.error_label.text = "IP 주소를 불러오는 동안 오류가 발생했습니다: {}".format(str(e))
 
+    def update_error_message(self, message):
+        self.error_label.text=message
+
 class NumberPadScreen(Screen):
     def __init__(self, button_sounds, display_text='', **kwargs):
         super().__init__(**kwargs)
@@ -127,7 +137,7 @@ class NumberPadScreen(Screen):
             bottom_layout.add_widget(button)
 
         # 취소 버튼
-        cancel_button = Button(text='취소', on_press=self.cancel_input, font_name='AppleSDGothicNeoEB', font_size='60sp')
+        cancel_button = Button(text='←', on_press=self.cancel_input, font_name='AppleSDGothicNeoEB', font_size='60sp', color=(1,0,0,1))
         bottom_layout.add_widget(cancel_button)
 
         # 0 버튼
@@ -135,7 +145,7 @@ class NumberPadScreen(Screen):
         bottom_layout.add_widget(zero_button)
 
         # 완료 버튼
-        done_button = Button(text='완료', on_press=self.complete_input, font_name='AppleSDGothicNeoEB', font_size='60sp')
+        done_button = Button(text='완료', on_press=self.complete_input, font_name='AppleSDGothicNeoEB', font_size='60sp', color=(0,1,0,1))
         bottom_layout.add_widget(done_button)
 
         main_layout.add_widget(bottom_layout)
@@ -186,18 +196,18 @@ class GalaxyTabApp(App):
         self.PORT = None
         self.display_text = '010'
         self.button_sounds = {
-            '0': SoundLoader.load('0.wav'),
-            '1': SoundLoader.load('1.wav'),
-            '2': SoundLoader.load('2.wav'),
-            '3': SoundLoader.load('3.wav'),
-            '4': SoundLoader.load('4.wav'),
-            '5': SoundLoader.load('5.wav'),
-            '6': SoundLoader.load('6.wav'),
-            '7': SoundLoader.load('7.wav'),
-            '8': SoundLoader.load('8.wav'),
-            '9': SoundLoader.load('9.wav'),
-            'back': SoundLoader.load('back.wav'),
-            'clear': SoundLoader.load('clear.wav'),
+            '0': SoundLoader.load('0.mp3'),
+            '1': SoundLoader.load('1.mp3'),
+            '2': SoundLoader.load('2.mp3'),
+            '3': SoundLoader.load('3.mp3'),
+            '4': SoundLoader.load('4.mp3'),
+            '5': SoundLoader.load('5.mp3'),
+            '6': SoundLoader.load('6.mp3'),
+            '7': SoundLoader.load('7.mp3'),
+            '8': SoundLoader.load('8.mp3'),
+            '9': SoundLoader.load('9.mp3'),
+            'back': SoundLoader.load('back.mp3'),
+            'clear': SoundLoader.load('clear.mp3'),
         }
         self.server_socket=None
 
@@ -217,6 +227,15 @@ class GalaxyTabApp(App):
         self.screen_manager.add_widget(self.number_pad_screen)
 
         return self.screen_manager
+
+    def on_start(self, **kwargs):
+        if platform == "android":
+            from android.permissions import request_permissions, Permission
+            request_permissions(
+                [Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_EXTERNAL_STORAGE, Permission.INTERNET,
+                 Permission.ACCESS_NETWORK_STATE, Permission.ACCESS_WIFI_STATE, Permission.CHANGE_WIFI_MULTICAST_STATE])
+        else:
+            print("This code is only intended to run on an Android platform")
 
     def change_to_number_pad_screen(self):
         self.screen_manager.current = 'number_pad'
@@ -243,6 +262,15 @@ class GalaxyTabApp(App):
             receive_thread.start()
         except Exception as e:
             print("서버 연결에 실패했습니다:", e)
+            error_message="연결 실패: {}".format(e)
+            self.input_screen.update_error_message(error_message)
+
+            ping_result = subprocess.run(["ping", "-c", "4", host], capture_output=True, text=True)
+            print(ping_result.stdout)  # ping 결과 출력
+
+            # 에러 메시지에 ping 결과도 함께 출력
+            error_message_with_ping = f"{error_message}\nPing 결과:\n{ping_result.stdout}"
+            self.input_screen.update_error_message(error_message_with_ping)
 
     def save_ip_address_to_file(self, host):
         try:
@@ -253,16 +281,10 @@ class GalaxyTabApp(App):
             # Check if the IP address already exists in the file
             with open(file_path, "r") as file:
                 existing_addresses = file.readlines()
-                # if host + "\n" not in existing_addresses:
-                #     # Open the text file in append mode and write the IP address
-                #     with open(file_path, "a") as file:
-                #         file.write(host + "\n")
-                if existing_addresses and existing_addresses[-1]!=host+"\n":
+                if host + "\n" not in existing_addresses:
+                    # Open the text file in append mode and write the IP address
                     with open(file_path, "a") as file:
-                        file.wirte(host+"\n")
-                elif not existing_addresses:
-                    with open(file_path, "a") as file:
-                        file.write(host+"\n")
+                        file.write(host + "\n")
         except Exception as e:
             print("IP 주소를 저장하는 동안 오류가 발생했습니다:", e)
 
@@ -286,6 +308,24 @@ class GalaxyTabApp(App):
             if number_pad_screen:
                 number_pad_screen.display_text = '010-'
                 number_pad_screen.display_label.text = number_pad_screen.display_text
+        if message == "Quit":
+            self.reset_app()
+
+    @mainthread
+    def reset_app(self):
+        print("reset app called")
+        # 각 화면에 대한 인스턴스를 사용하여 화면을 초기화
+        input_screen = self.screen_manager.get_screen('input')
+        number_pad_screen = self.screen_manager.get_screen('number_pad')
+        # 입력 화면 초기화
+        input_screen.ip_input.text = ''
+        input_screen.port_input.text = ''
+        input_screen.error_label.text = ''
+        # 숫자 패드 화면 초기화
+        number_pad_screen.display_text = '010-'
+        number_pad_screen.display_label.text = number_pad_screen.display_text
+        # 입력 화면으로 전환
+        self.screen_manager.current = 'input'
 
     def receive_messages_from_server(self):
         while True:
@@ -293,13 +333,20 @@ class GalaxyTabApp(App):
                 if self.server_socket:
                     data = self.server_socket.recv(1024).decode()
                     if data:
-                        self.process_server_message(data)
+                        # self.process_server_message(data)
+                        if data == "Quit":
+                            self.reset_app()
+                            break
+                        else:
+                            self.process_server_message(data)
                 else:
                     # print("서버에 연결되어 있지 않습니다.")
                     break
             except Exception as e:
                 print("메시지 수신 중 오류 발생:", e)
                 break
+
+
 
 if __name__ == '__main__':
     GalaxyTabApp().run()
