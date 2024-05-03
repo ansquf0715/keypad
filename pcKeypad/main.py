@@ -9,27 +9,22 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushBut
 from PyQt5.QtCore import pyqtSignal, QObject, Qt
 from PyQt5.QtGui import QFont, QFontDatabase
 
-from flask import Flask, request
+import usb.core
+import usb.util
 
-app_flask = Flask(__name__)
-
-@app_flask.route('/')
-def index():
-    return 'Hello, Flask!'
-
-@app_flask.route('/message', methods=['POST'])
-def receive_message():
-    message = request.json['message']
-    print("Received message from client:", message)
-    #여기에 pyqt 앱으로 메시지를 전달하는 코드 추가 가능
-    return 'Message received'
+dev = usb.core.find(True)
+if dev is None:
+    print("No device")
+else:
+    print("device : ", dev)
 
 class MyApp(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
         self.server = None
-        self.add_firewall_rule()
+        # self.add_firewall_rule()
+        # self.find_usb_device()
 
     def initUI(self):
         self.setWindowTitle('PC KEYPAD')
@@ -99,6 +94,22 @@ class MyApp(QWidget):
         self.btn_receive.clicked.connect(self.sendSignalToClients)
         self.btn_copy.clicked.connect(self.btnClicked)
 
+    def find_usb_device(self):
+        #usb 장치 찾기
+        self.device = usb.core.find()
+        if self.device is None:
+            print('USB 장치를 찾을 수 없습니다.')
+            return
+        try:
+            #USB 장치 정보 출력
+            print("Manufacturer:", usb.util.get_string(self.device, self.device.iManufacturer))
+            print("Product:", usb.util.get_string(self.device, self.device.iProduct))
+            print("Serial:", usb.util.get_string(self.device, self.device.iSerialNumber))
+
+        except Exception as e:
+            print("USB 장치 접근 중 오류 발생", e)
+            return
+
     def show_server_info(self, host, port):
         self.ip_label.setText(f"IP 주소: {host}")
         self.port_label.setText(f"포트 번호: {port}")
@@ -137,8 +148,6 @@ class MyApp(QWidget):
         event.accept()
 
 if __name__ == '__main__':
-    app_flask_thread = threading.Thread(target=app_flask.run, kwargs={'host': '0.0.0.0', 'port': 5000})
-    app_flask_thread.start()
 
     app = QApplication(sys.argv)
     ex = MyApp()
