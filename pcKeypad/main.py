@@ -3,28 +3,59 @@ import socket
 import threading
 import sys
 import random
-import subprocess
-import platform
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
+from PyQt5.QtCore import pyqtSignal, QObject, Qt, QEventLoop, QCoreApplication, QTimer
 from PyQt5.QtGui import QFont, QFontDatabase
+import asyncio
+import websockets
+import asyncqt
 
-import usb.core
-import usb.util
+class Server(QObject):
+    message_received = pyqtSignal(str)
 
-dev = usb.core.find(True)
-if dev is None:
-    print("No device")
-else:
-    print("device : ", dev)
+    def __init__(self):
+        super().__init__()
+        self.server = None
+        self.clients = set()
+
+    async def start_server(self, host, port):
+        print('async start server')
+        self.server = await websockets.serve(self.handle_client, host, port)
+
+    async def handle_client(self, websocket, path):
+        print('async handle client')
+        self.clients.add(websocket)
+        try:
+            async for message in websocket:
+                self.message_received.emit(message)
+        finally:
+            self.clients.remove(websocket)
+
+    def send_message_to_client(self, message):
+        print('send message to client')
+        for client in self.clients:
+            asyncio.ensure_future(client.send(message))
 
 class MyApp(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
-        self.server = None
-        # self.add_firewall_rule()
-        # self.find_usb_device()
+        self.server = Server()
+        self.loop = QEventLoop()
+
+    async def start_server(self):
+        print('start server func')
+        await self.server.start_server("localhost", 8765)
+
+    async def main(self):
+        app = QApplication(sys.argv)
+        ex = MyApp()
+        ex.show()
+
+        await ex.start_server()
+
+        async with asyncqt.QEventLoop() as loop:
+            sys.exit(loop.run_forever())
 
     def initUI(self):
         self.setWindowTitle('PC KEYPAD')
@@ -41,6 +72,7 @@ class MyApp(QWidget):
 
         font = QFont()
         font.setPointSize(25)
+
 
         # IP 주소와 포트 번호를 표시하는 라벨
         self.ip_label = QLabel("IP 주소 : 000.000.0.0")
@@ -94,22 +126,6 @@ class MyApp(QWidget):
         self.btn_receive.clicked.connect(self.sendSignalToClients)
         self.btn_copy.clicked.connect(self.btnClicked)
 
-    def find_usb_device(self):
-        #usb 장치 찾기
-        self.device = usb.core.find()
-        if self.device is None:
-            print('USB 장치를 찾을 수 없습니다.')
-            return
-        try:
-            #USB 장치 정보 출력
-            print("Manufacturer:", usb.util.get_string(self.device, self.device.iManufacturer))
-            print("Product:", usb.util.get_string(self.device, self.device.iProduct))
-            print("Serial:", usb.util.get_string(self.device, self.device.iSerialNumber))
-
-        except Exception as e:
-            print("USB 장치 접근 중 오류 발생", e)
-            return
-
     def show_server_info(self, host, port):
         self.ip_label.setText(f"IP 주소: {host}")
         self.port_label.setText(f"포트 번호: {port}")
@@ -129,12 +145,11 @@ class MyApp(QWidget):
         #클립보드에 저장할 텍스트
         original_text = self.received_message_label.text()
         #하이픈 제거
-        # modified_text = original_text[:3]+original_text[4:8]+original_text[9:]
+        modified_text = original_text[:3]+original_text[4:8]+original_text[9:]
 
         #클립보드에 수신된 데이터 저장
         clipboard = QApplication.clipboard()
-        # clipboard.setText(modified_text.replace('\n', '\r\n'))
-        clipboard.setText(original_text.replace('\n', '\r\n'))
+        clipboard.setText(modified_text.replace('\n', '\r\n'))
 
     def sendSignalToClients(self):
         # print("send signal to Clients")
@@ -147,9 +162,19 @@ class MyApp(QWidget):
             self.server.stop_server()
         event.accept()
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     ex = MyApp()
+#     ex.show()
+#
+#     asyncio.ensure_future(ex.start_server())
+#     loop_thread = threading.Thread(target=QCoreApplication.instance().exec_)
+#     loop_thread.start()
+#
+#     sys.exit(app.exec_())
 
-    app = QApplication(sys.argv)
-    ex = MyApp()
-    ex.show()
-    sys.exit(app.exec_())
+if __name__ == '__main__':
+    app = MyApp()
+    asyncio.ensure_future(app.main())
+    asyncio.ensure_future(app.start_server())
+    asyncio.get_event_loop().run_forever()

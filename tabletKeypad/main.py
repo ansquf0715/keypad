@@ -18,7 +18,6 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.clock import mainthread
 from kivy.config import Config
 from kivy import platform
-import usb.core
 
 
 #화면 크기 설정
